@@ -5,9 +5,7 @@ from time import sleep
 t = Turret()
 
 sleep(2.5)
-t.pan(180)
-sleep(2.5)
-t.aim_at(25, 10)
+t.sweep(1000)
 sleep(2.5)
 #t.fire()
 t.release_brakes()

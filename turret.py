@@ -1,5 +1,5 @@
 from cued_ia_lego import *
-import time 
+import time as t
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -21,7 +21,7 @@ class Turret:
         #self.tilt_motor.reset_position()
         #self.fire_motor.reset_position()
 
-        #self.ultrasonic = Ultrasonic(self.brick, PORT_1)
+        self.ultrasonic = Ultrasonic(self.brick, PORT_1)
         #self.touch = Touch(self.brick, PORT_2)
 
         
@@ -41,14 +41,14 @@ class Turret:
         if direction:
             inc = 1
         
-        t_start = time.time()
+        t_start = t.time()
         readings = [[]]
         
         while t.time() < t_start + duration:
             angle = self.pan_angle()
-            dist = ultrasonic.get_distance()
+            dist = self.sense()
             readings.append([angle,dist])
-            pan_motor.pan(inc)
+            self.pan_motor.pan(inc)
         
         return readings
         
@@ -62,7 +62,7 @@ class Turret:
         
         while (limit-angle)*inc > 0:
             angle = self.pan_angle()
-            dist = ultrasonic.get_distance()
+            dist = self.sen()
             readings.append([angle,dist])
             self.pan_motor.pan(inc)
 

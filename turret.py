@@ -11,7 +11,7 @@ class Turret:
         self.sensitivity = sensitivity
         # initialize brick and motors with defaults
         self.brick = NXTBrick()
-        self.pan_motor = Motor(self.brick, PORT_A, 50, True, True, True, False)
+        self.pan_motor = Motor(self.brick, PORT_A, 25, True, True, True, False)
         self.tilt_motor = Motor(self.brick, PORT_B, 10, True, True, True, True)
         self.fire_motor = Motor(self.brick, PORT_C, 100, False, False, False, False)
 
@@ -44,6 +44,9 @@ class Turret:
 
         def checkPos():
             pos = self.get_pan_angle()
+            if self.pan_motor.is_ready():
+                self.pan_motor.turn_to(max_angle)
+                self.cw = True
             # reverses motor if we are at or past min/max angle, and turning in the wrong direction
             if min_angle >= pos and not self.cw:
                 # wait for current motor action to finish
@@ -51,14 +54,14 @@ class Turret:
                 self.pan_motor.turn_to(max_angle)
                 self.cw = True
                 # detect objects between sweeps
-                self.detect()
+                print(self.detect())
                 # current readings -> previous readings so we can compare between sweeps
                 self.previous_readings = self.current_readings
             if max_angle <= pos and self.cw:
                 self.pan_motor.wait_for()
                 self.pan_motor.turn_to(min_angle)
                 self.cw = False
-                self.detect()
+                print(self.detect())
                 self.previous_readings = self.current_readings
 
         self.pan_motor.turn_to(max_angle)
@@ -174,16 +177,15 @@ class Turret:
         for k in self.previous_readings.keys():
             k_ = float(k)
             if k_ < 0:
-                theta.append(360 + k_)
+                theta.append(((360 + k_) / 180) * math.pi)
             else:
-                theta.append(k_)
+                theta.append((k_ / 180) * math.pi)
 
         theta = np.array(theta)
 
-        print(r)
-        print(theta)
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
         ax.scatter(theta, r)
+        ax.set_rmax(260)
         ax.grid(True)
         plt.show()
 

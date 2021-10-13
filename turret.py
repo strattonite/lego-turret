@@ -32,7 +32,7 @@ class Turret:
         self.current_readings = {}
 
         self.accel = 9.81
-        self.velocity = "PLACE HOLDER"
+        self.velocity = 300
 
     def scan(self, min_angle, max_angle, duration):
         t_end = t.time() + duration
@@ -122,6 +122,7 @@ class Turret:
             return False                
 
     def aim(self,dist,ang):
+        print((dist*self.accel)/self.velocity**2)
         tilt_rad = ((np.arcsin((dist*self.accel)/self.velocity**2))/2)
         tilt_deg = tilt_rad*180/math.pi
         self.aim_at(tilt_deg,ang)
@@ -139,11 +140,13 @@ class Turret:
     def aim_at(self, ax, az):
         self.pan_motor.turn_to(az, 10, True, True, True, False)
         self.pan_motor.wait_for()
-        self.tilt_motor.turn_to(-ax, 10, True, False, True, True)
+        self.tilt_motor.turn(-ax, 10, True, False, True, True)
         self.tilt_motor.wait_for()
 
 
     def fire(self):
+        self.fire_motor.turn(-5)
+        self.fire_motor.wait_for()
         self.fire_motor.turn(5)
         self.fire_motor.wait_for()
 

@@ -31,6 +31,9 @@ class Turret:
         self.previous_readings = {}
         self.current_readings = {}
 
+        self.accel = 9.81
+        self.velocity = "PLACE HOLDER"
+
     def scan(self, min_angle, max_angle, duration):
         t_end = t.time() + duration
         # self.cw indicates whether turret is panning clockwise
@@ -116,7 +119,10 @@ class Turret:
         else:
             return False                
 
-
+    def aim(self,dist,ang):
+        tilt_rad = ((np.arcsin((dist*self.accel)/self.velocity**2))/2)
+        tilt_deg = tilt_rad*180/math.pi
+        self.aim_at(tilt_deg,ang)
         
     def get_pan_angle(self):
         return self.pan_motor.get_position()
@@ -164,7 +170,7 @@ class Turret:
     def sweep(self, angle):
         print("sweeping")
         cur_angle = self.get_pan_angle
-        readings1 = self.scan_angle(angle)
+        self.readings1 = self.scan_angle(angle)
         readings2 = self.scan_angle(cur_angle)
         final = readings1 + readings2
         self.reading = final

@@ -11,9 +11,9 @@ class Turret:
         self.sensitivity = sensitivity
         # initialize brick and motors with defaults
         self.brick = NXTBrick()
-        self.pan_motor = Motor(self.brick, PORT_A, 100, True, True, True, False)
+        self.pan_motor = Motor(self.brick, PORT_A, 50, True, True, True, False)
         self.tilt_motor = Motor(self.brick, PORT_B, 10, True, True, True, True)
-        self.fire_motor = Motor(self.brick, PORT_C, 25, False, False, False, False)
+        self.fire_motor = Motor(self.brick, PORT_C, 100, False, False, False, False)
 
         # set the turret tilt to 0 degrees and hold it
         self.tilt_motor.turn(27.5, 25, True, True, True, True)
@@ -60,6 +60,8 @@ class Turret:
                 self.cw = False
                 self.detect()
                 self.previous_readings = self.current_readings
+
+        self.pan_motor.turn_to(max_angle)
 
         while checkT():
             checkPos()
@@ -132,49 +134,6 @@ class Turret:
 
     def start(self):
         print("starting")
-
-    def scan_time(self, duration, direction):
-        print("scanning")
-        
-        inc = -1
-        if direction:
-            inc = 1
-        
-        t_start = t.time()
-        readings = [[]]
-        
-        while t.time() < t_start + duration:
-            angle = self.get_pan_angle()
-            dist = self.get_distance()
-            readings.append([angle,dist])
-            self.pan_motor.pan(inc)
-        
-        return readings
-        
-    def scan_angle(self, limit):
-        print("scanning")
-        readings = [[]]
-        angle = self.get_pan_angle()
-        inc = -1
-        if angle < limit:
-            inc = 1
-        
-        while (limit-angle)*inc > 0:
-            angle = self.get_pan_angle()
-            dist = self.sen()
-            readings.append([angle,dist])
-            self.pan_motor.pan(inc)
-
-        return readings
-
-    def sweep(self, angle):
-        print("sweeping")
-        cur_angle = self.get_pan_angle
-        self.readings1 = self.scan_angle(angle)
-        readings2 = self.scan_angle(cur_angle)
-        final = readings1 + readings2
-        self.reading = final
-        return final
             
            
     def aim_at(self, ax, az):
@@ -202,5 +161,28 @@ class Turret:
 
     def release_brakes(self):
         self.tilt_motor.idle()
+
+    def plot_graph(self):
+        r = []
+        for v in self.previous_readings.values():
+            r.append(float(v))
+        r = np.array(r)
+        theta = []
+        for k in self.previous_readings.keys():
+            k_ = float(k)
+            if k_ < 0:
+                theta.append(360 + k_)
+            else:
+                theta.append(k_)
+
+        theta = np.array(theta)
+
+        print(r)
+        print(theta)
+        fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        ax.scatter(theta, r)
+        ax.grid(True)
+        plt.show()
+
 
     

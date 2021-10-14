@@ -2,12 +2,14 @@
 from turret import *
 from time import sleep
 
-t = Turret()
+t = Turret(0)
 
 sleep(2.5)
-t.sweep(1000)
+#t.scan(-60, 60, 10)
+t.pan(30)
+t.tilt(10)
+t.fire()
 sleep(2.5)
-#t.fire()
 t.release_brakes()
+#t.plot_graph()
 
-# wait for touch input to start, and set stop time ...

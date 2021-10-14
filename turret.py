@@ -28,8 +28,8 @@ class Turret:
         self.ultrasonic = Ultrasonic(self.brick, PORT_1)
         self.touch = Touch(self.brick, PORT_2)
 
-        self.previous_readings = {}
-        self.current_readings = {}
+        self.readings = []
+        self.current_readings = []
 
         self.accel = 9.81
         self.velocity = 300
@@ -42,44 +42,66 @@ class Turret:
         def checkT():
             return t.time() < t_end
 
+        angle = -1
         def checkPos():
             pos = self.get_pan_angle()
-            if self.pan_motor.is_ready():
-                self.pan_motor.turn_to(max_angle)
-                self.cw = True
             # reverses motor if we are at or past min/max angle, and turning in the wrong direction
-            if min_angle >= pos and not self.cw:
-                # wait for current motor action to finish
-                self.pan_motor.wait_for()
-                self.pan_motor.turn_to(max_angle)
-                self.cw = True
-                # detect objects between sweeps
-                print(self.detect())
-                # current readings -> previous readings so we can compare between sweeps
-                self.previous_readings = self.current_readings
+            # if min_angle >= pos and not self.cw:
+            #     # wait for current motor action to finish
+            #     self.pan_motor.wait_for()
+            #     self.pan_motor.turn_to(max_angle)
+            #     self.cw = True
+            #     # current readings -> previous readings so we can compare between sweeps
+            #     self.readings.append(self.current_readings)
+            #     if len(self.readings) > 2:
+            #         print(self.detect())
             if max_angle <= pos and self.cw:
                 self.pan_motor.wait_for()
                 self.pan_motor.turn_to(min_angle)
                 self.cw = False
-                print(self.detect())
-                self.previous_readings = self.current_readings
+                self.readings.append(self.current_readings)
+                self.current_readings = []
+                if len(self.readings) > 2:
+                    detected = self.detect()
+                    if detected:
+                        print(detected)
+                        #self.aim(detected["distance"], (detected["angle"] * 180) / math.pi)
+                        #./self.fire()
 
-        self.pan_motor.turn_to(max_angle)
+            elif self.pan_motor.is_ready():
+                self.pan_motor.turn_to(max_angle)
+                self.cw = True
+                if len(self.readings) > 2:
+                    detected = self.detect()
+                    if detected:
+                        print(detected)
+                        #self.aim(detected["distance"], (detected["angle"] * 180) / math.pi)
+                        #self.fire()
 
+        
         while checkT():
             checkPos()
             # take reading
-            self.current_readings[
-                self.get_pan_angle()
-            ] = self.get_distance()
+            a = self.get_pan_angle()
+            d = self.get_distance()
+            if a != angle:
+                self.current_readings.append([float((a * math.pi) / 180), float(d)])
+                angle = a
+            
 
 
     def detect(self):
         # create dict of changes to readings between sweeps
-        delta_readings = {}
-        for angle in self.previous_readings.keys():
-            delta_readings[angle] = self.previous_readings[angle] - self.current_readings[angle]
-        
+        l = len(self.readings)
+        cur_readings = self.readings[l - 1]
+        prev_readings = self.readings[l - 3]
+        delta_readings = []
+        i = 0
+        while i < len(prev_readings) and cur_readings[i]:
+            delta_readings.append([prev_readings[i][0], prev_readings[i][1] - cur_readings[i][1]])
+            i += 1
+
+
         detecting = False
         min_ang = 0 
         max_ang = 0
@@ -88,38 +110,43 @@ class Turret:
         closest_dist = 0
         closest_ang = 0
         object_width = 0
-        for angle in delta_readings.keys():
+
+        i_ = 0
+        while i_ < len(delta_readings):
+            angle = delta_readings[i_][0]
+            distance = delta_readings[i_][1]
             # is object currently being detected?
             if not detecting:
                 # start measuring object
-                if delta_readings[angle] > 0:
+                if distance > 0:
                     detecting = True
                     min_ang = angle
-                    min_dist = self.current_readings[angle]
-                    closest_point = min_dist
+                    min_dist = cur_readings[i_][1]
+                    closest_dist = min_dist
 
             else:
                 # check for closest point
-                if delta_readings[angle] > 0:
-                    if self.current_readings[angle] < closest_point:
-                        closest_dist = self.current_readings[angle]
+                if distance > 0:
+                    if cur_readings[i_][1] < closest_dist:
+                        closest_dist = cur_readings[i_][1]
                         closest_ang = angle
                 
                 else:
                     # stop measuring object
                     max_ang = angle - 1
-                    max_dist = self.current_readings[max_ang]
+                    max_dist = cur_readings[i_ - 1][1]
 
                     # cosine rule to find width of object
                     object_width = math.sqrt(
                         (min_dist**2) + (max_dist**2) - (2 * min_dist * max_dist * math.cos(max_ang - min_ang))
                     )
+            i_ += 1
 
         if object_width > self.sensitivity:
             return {
-                closest_dist,
-                closest_ang,
-                object_width
+                "distance": closest_dist,
+                "angle": closest_ang,
+                "width": object_width
             }
         else:
             return False                
@@ -170,17 +197,13 @@ class Turret:
 
     def plot_graph(self):
         r = []
-        for v in self.previous_readings.values():
-            r.append(float(v))
-        r = np.array(r)
         theta = []
-        for k in self.previous_readings.keys():
-            k_ = float(k)
-            if k_ < 0:
-                theta.append(((360 + k_) / 180) * math.pi)
-            else:
-                theta.append((k_ / 180) * math.pi)
+        for sweep in self.readings:
+            for m in sweep:
+                r.append(m[1])
+                theta.append(m[0])
 
+        r = np.array(r)
         theta = np.array(theta)
 
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
